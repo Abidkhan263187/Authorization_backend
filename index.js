@@ -6,7 +6,7 @@ require('dotenv').config();
 
 const { connection } = require("./db")
 const { signupModel } = require('./signUpModel')
-const {projectModel}=require('./projectModel')
+const { projectModel } = require('./projectModel')
 
 const app = express()
 app.use(express.json())
@@ -16,37 +16,43 @@ app.get('/', (req, res) => {
 
 
 const authenticate = (req, res, next) => {
+    const authorizationHeader = req.headers.authorization;
+  if (!authorizationHeader) {
+    return res.status(401).json({ msg: "Please login again" });
+  }
     const token = req.headers.authorization.split(" ")[1]
     if (!token) {
         return res.status(401).send({ msg: "please login again" })
     }
-
-    const decoded = jwt.verify(token, process.env.SECRET);
-     console.log(decoded)
-    const {email}= decoded
-      req.email= email  // we are setting the email in req.email 
-
-    if (decoded) {
-        next()
-    }
     else {
-        res.status(401).send("please login again")
+        const decoded = jwt.verify(token, process.env.SECRET);
+        console.log(decoded)
+        const { email } = decoded
+        req.email = email  // we are setting the email in req.email 
+
+        if (decoded) {
+            next()
+        }
+        else {
+            res.status(401).send("please login again")
+        }
     }
+
 
 }
-const authorization =(userrole)=>{
-   return async (req, res, next) => {
+const authorization = (userrole) => {
+    return async (req, res, next) => {
         console.log(req.email)
-          const { role } = await signupModel.findOne({ email: req.email })
-          console.log(role)
-          if ( userrole.includes(role)) {
-              next()
-          }
-          else {
-              res.status(401).send({ msg: "you are not authorized to acces this" })
-          }
-      }
-} 
+        const { role } = await signupModel.findOne({ email: req.email })
+        console.log(role)
+        if (userrole.includes(role)) {
+            next()
+        }
+        else {
+            res.status(401).send({ msg: "you are not authorized to acces this" })
+        }
+    }
+}
 
 
 
@@ -98,29 +104,29 @@ app.post('/login', async (req, res) => {
 
 })
 
-app.get('/projects', authenticate,authorization(["seller","customer","admin"]) ,async (req, res) => {
+app.get('/projects', authenticate, authorization(["seller", "customer", "admin"]), async (req, res) => {
 
 
-        const projects= await  projectModel.find()
-     res.status(200).send({projects})
+    const projects = await projectModel.find()
+    res.status(200).send({ projects })
 
 })
 
 
-app.post('/projects/create', authenticate,authorization(["seller","abid"]), async (req, res) => {
+app.post('/projects/create', authenticate, authorization(["seller", "admin"]), async (req, res) => {
 
     const { title, description } = req.body;
 
     try {
-        if(req.body){
+        if (req.body) {
             const project = projectModel({
                 title,
                 description
             })
             await project.save()
             res.status(200).send("project created successfully")
-        }else{
-           res.status(400).send("provide all the details for the project")
+        } else {
+            res.status(400).send("provide all the details for the project")
         }
     } catch (error) {
         console.log("error while creating project")
@@ -132,17 +138,17 @@ app.post('/projects/create', authenticate,authorization(["seller","abid"]), asyn
 
 
 // only for customer 
-app.get("/finance", authenticate,authorization(["customer"]), (req, res) => {
+app.get("/finance", authenticate, authorization(["customer"]), (req, res) => {
     res.status(200).send("successfully authenticated on finance0 page ")
 })
 
-app.get('/admin', authenticate,authorization(["admin"]),(req,res)=>{
+app.get('/admin', authenticate, authorization(["admin"]), (req, res) => {
     res.status(200).send("successfully authenticated on admin page ")
 })
 
 
 
-app.post('/projects/delete/:id', authenticate,authorization, (req, res) => {
+app.post('/projects/delete/:id', authenticate, authorization, (req, res) => {
 
 
     res.status(200).send("successfully deleted")
